@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLINK - 스마트한 동아리 연결</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="web.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div id="login-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-window" style="width: 90%; max-width: 400px; text-align: center;">
+            <h2 style="font-weight: 800; font-size: 24px; margin-bottom: 10px;">CLINK 시작하기</h2>
+            <p style="color: var(--gray); margin-bottom: 30px; font-size: 14px; line-height: 1.5;">
+                학교 공식 계정(@pess.cnehs.kr)으로<br>안전하게 로그인하세요.
+            </p>
+            <div id="google-login-btn-container" style="display: flex; justify-content: center; margin-bottom: 20px;"></div>
+            <p id="close-modal" style="cursor: pointer; color: #94a3b8; font-size: 14px; text-decoration: underline;">나중에 둘러볼게요</p>
+        </div>
+    </div>
+
+    <div id="recommend-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1050;">
+        <div class="modal-window" style="max-width: 650px; padding: 40px; position: relative;">
+            <button id="close-recommend-modal-x" style="position: absolute; top: 20px; right: 25px; background: none; border: none; font-size: 24px; color: var(--gray); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; font-size: 24px; margin-bottom: 10px; color: #2563eb;">AI 맞춤 동아리 분석</h3>
+            <p style="color: var(--gray); margin-bottom: 25px; line-height: 1.5;">나의 성향과 가장 잘 맞는 동아리를 알아보기 위해 아래 15개의 질문에 1점(매우 아니다)부터 5점(매우 그렇다) 사이로 답해주세요.</p>
+            
+            <div id="quiz-container" style="max-height: 450px; overflow-y: auto; padding-right: 15px; margin-bottom: 20px;"></div>
+            
+            <div id="quiz-actions" style="display: flex; gap: 12px;">
+                <button id="get-recommend-btn" style="flex: 1; padding: 16px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">결과 확인하기</button>
+                <button id="close-recommend-modal" style="padding: 16px 30px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text); border-radius: 12px; font-weight: 700; cursor: pointer;">취소</button>
+            </div>
+            <div id="recommend-result" style="display: none; margin-top: 10px; padding: 25px; background: var(--bg-light); border-radius: 16px; border: 1px solid var(--border);"></div>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1100;">
+        <div class="modal-window" style="max-width: 600px; padding: 40px;">
+            <div id="detail-modal-content"></div>
+            <button id="close-detail-modal" style="width: 100%; padding: 15px; margin-top: 20px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; font-weight: 700; color: var(--text); cursor: pointer;">닫기</button>
+        </div>
+    </div>
+
+    <div id="club-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1050;">
+        <div class="modal-window">
+            <h3 style="font-weight: 800; margin-bottom: 15px;" id="club-modal-title">새 동아리 등록</h3>
+            <div class="admin-form" style="display: flex; flex-direction: column; gap: 12px;">
+                
+                <div style="color: var(--gray); font-size: 13px; font-weight: 700;">동아리 구분 (먼저 선택하세요)</div>
+                <div id="club-type-buttons" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 5px;"></div>
+
+                <input type="text" id="club-name" placeholder="동아리 이름" class="input-theme">
+                <textarea id="club-intro" placeholder="동아리 소개" style="height: 80px;" class="input-theme"></textarea>
+                
+                <div id="career-fields" style="display: flex; flex-direction: column; gap: 12px;">
+                    <input type="text" id="club-department" placeholder="관련 학과 (예: 컴퓨터공학과, 경영학과)" class="input-theme">
+                    <input type="text" id="club-career" placeholder="향후 진로 (예: 소프트웨어 개발자, 마케터)" class="input-theme">
+                </div>
+
+                <div id="autonomous-fields" style="display: none; flex-direction: column; gap: 12px;">
+                    <textarea id="club-activity" placeholder="동아리 활동 내용" style="height: 80px;" class="input-theme"></textarea>
+                </div>
+                
+                <div style="color: var(--gray); font-size: 13px; font-weight: 700; margin-top: 5px;">동아리의 분야 (카테고리 다중 선택)</div>
+                <div id="club-category-buttons" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 5px;"></div>
+                
+                <button id="save-club-btn" style="padding: 15px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; margin-top: 10px;">저장하기</button>
+                <button id="close-club-modal" style="background: none; border: none; color: #94a3b8; cursor: pointer; margin-top: 5px; font-weight: 600;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="question-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1050;">
+        <div class="modal-window">
+            <h3 style="font-weight: 800; margin-bottom: 15px;" id="question-modal-title">새 성향 질문 등록</h3>
+            <div class="admin-form" style="display: flex; flex-direction: column; gap: 12px;">
+                <textarea id="question-text" placeholder="성향 분석용 질문 내용" style="height: 80px;" class="input-theme"></textarea>
+                <div style="color: var(--gray); font-size: 13px; font-weight: 700; margin-top: 5px;">연결할 동아리 카테고리 (다중 선택 가능)</div>
+                <div id="question-category-buttons" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 5px;"></div>
+                <button id="save-question-btn" style="padding: 15px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; margin-top: 10px;">저장하기</button>
+                <button id="close-question-modal" style="background: none; border: none; color: #94a3b8; cursor: pointer; margin-top: 5px; font-weight: 600;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notice-add-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1050;">
+        <div class="modal-window">
+            <h3 style="font-weight: 800; margin-bottom: 15px;">새 모집 공고 등록</h3>
+            <div class="admin-form" style="display: flex; flex-direction: column; gap: 12px;">
+                <input type="text" id="notice-club-name" placeholder="동아리 이름" class="input-theme">
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+                        <label style="font-size: 12px; font-weight: 700; color: var(--gray);">모집 시작일</label>
+                        <input type="date" id="notice-start-date" class="input-theme">
+                    </div>
+                    <span style="font-weight: bold; color: var(--gray); margin-top: 20px;">~</span>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+                        <label style="font-size: 12px; font-weight: 700; color: var(--gray);">모집 마감일</label>
+                        <input type="date" id="notice-end-date" class="input-theme">
+                    </div>
+                </div>
+                
+                <textarea id="notice-desc" placeholder="모집 내용" style="height: 100px;" class="input-theme"></textarea>
+                <input type="text" id="notice-link" placeholder="지원 링크 (URL)" class="input-theme">
+                <button id="save-notice-btn" style="padding: 15px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">게시하기</button>
+                <button id="close-notice-modal" style="background: none; border: none; color: #94a3b8; cursor: pointer; margin-top: 10px; font-weight: 600;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="sidebar">
+        <div>
+            <div class="sidebar-logo"><span class="logo-circle" style="background: #2563eb;">C</span> CLINK</div>
+            <ul class="sidebar-menu">
+                <li id="menu-home" class="active"><i class="fa-solid fa-house"></i> CLINK</li>
+                <li id="menu-search"><i class="fa-solid fa-magnifying-glass"></i> 동아리 검색</li>
+                <li id="menu-notice"><i class="fa-solid fa-address-card"></i> 모집 공고</li>
+                <li id="menu-admin" style="display: none; color: #e11d48;"><i class="fa-solid fa-lock"></i> 관리자 모드</li>
+                <li id="menu-aiAdmin" style="display: none; color: #10b981;"><i class="fa-solid fa-clipboard-question"></i> AI 질문 관리</li>
+            </ul>
+        </div>
+        
+        <div id="dev-panel" style="display: none; margin-top: auto; padding: 15px; background: var(--bg-light); border-radius: 12px; border: 1px solid var(--border);">
+            <div style="font-weight: 700; margin-bottom: 10px; font-size: 12px; color: var(--gray);"><i class="fa-solid fa-wrench"></i> 개발자 도구</div>
+            <button id="reset-data-btn" style="display: block; width: 100%; padding: 8px; margin-bottom: 6px; background: #94a3b8; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">전체 초기화</button>
+            <button id="export-data-btn" style="display: block; width: 100%; padding: 8px; margin-bottom: 6px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">데이터 내보내기</button>
+            <button id="import-data-btn" style="display: block; width: 100%; padding: 8px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">데이터 불러오기</button>
+            <input id="import-file" type="file" style="display: none;">
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="main-header">
+            <button id="theme-toggle" style="background: var(--bg-light); border: 1px solid var(--border); padding: 10px 15px; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <div id="user-profile" style="display: none; align-items: center; gap: 15px;">
+                <div id="user-avatar-text" style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700;"></div>
+                <div style="display: flex; flex-direction: column;">
+                    <span id="user-name" style="font-weight: 700; font-size: 14px;"></span>
+                    <button id="logout-btn" style="font-size: 12px; color: #94a3b8; background: none; border: none; cursor: pointer; padding: 0; text-align: left;">로그아웃</button>
+                </div>
+            </div>
+            <button id="open-login-btn" class="login-btn">로그인</button>
+        </header>
+
+        <div id="home-view" class="content-view">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <h2 class="hero-title" style="font-size: 80px; font-weight: 800; line-height: 1.2; margin-bottom: 5px; letter-spacing: -0.5px;">
+                        <span style="color: #2563eb;">CLINK</span><span style="color: #ff0000;">,</span>
+                    </h2>
+                    <p class="hero-subtitle" style="font-size: 40px; font-weight: 800; line-height: 1.3; margin-bottom: 30px; letter-spacing: -0.5px; color: var(--text);">
+                        이제, 동아리도 <span style="color: #ff0000;">맞춤형</span>으로
+                    </p>
+                    <div class="search-bar-modern">
+                        <i class="fa-solid fa-magnifying-glass" style="color: var(--gray);"></i>
+                        <input type="text" id="home-search-input" placeholder="관심 있는 동아리명을 검색하세요">
+                        <button id="home-search-btn" style="background: #2563eb;">검색</button>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="font-size: 16px; font-weight: 800;">주요 카테고리 둘러보기</h3>
+                        </div>
+                        <div class="home-categories">
+                            <div class="home-cat-item" data-cat="프로그래밍"><div class="cat-icon"><i class="fa-solid fa-code"></i></div><span>프로그래밍</span></div>
+                            <div class="home-cat-item" data-cat="문화"><div class="cat-icon"><i class="fa-solid fa-palette"></i></div><span>문화·예술</span></div>
+                            <div class="home-cat-item" data-cat="체육"><div class="cat-icon"><i class="fa-solid fa-basketball"></i></div><span>체육</span></div>
+                            <div class="home-cat-item" data-cat="학술"><div class="cat-icon"><i class="fa-solid fa-book-open"></i></div><span>학술</span></div>
+                            <div class="home-cat-item" data-cat="사회봉사"><div class="cat-icon"><i class="fa-solid fa-hand-holding-heart"></i></div><span>봉사</span></div>
+                            <div class="home-cat-item" data-cat="발명"><div class="cat-icon"><i class="fa-solid fa-lightbulb"></i></div><span>발명·창업</span></div>
+                            <div class="home-cat-item" data-cat="역사"><div class="cat-icon"><i class="fa-solid fa-landmark"></i></div><span>역사</span></div>
+                            <div class="home-cat-item" data-target="notice"><div class="cat-icon"><i class="fa-solid fa-bullhorn" style="color: #e11d48;"></i></div><span style="font-weight: 800; color: #e11d48;">모집 공고</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hero-side-card colored-banner ai-banner-glow" id="view-recommend-banner" style="cursor: pointer; background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('webai.png'); background-size: cover; background-position: center; background-repeat: no-repeat; width: 405px; height: auto; aspect-ratio: 1000 / 900; padding: 30px;">
+                    <div class="banner-badge" style="background: rgba(255,255,255,0.25);">AI 맞춤 추천</div>
+                    <div class="banner-info" style="margin-top: auto;">
+                        <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px; color: white; line-height: 1.4;">나의 진로에 부합하는,<br>딱 맞는 동아리 추천받기</h3>
+                        <p style="font-size: 13px; color: white; opacity: 0.85;">여기를 클릭하세요.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="search-view" class="content-view" style="display: none; padding: 40px 60px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h1 style="font-size: 32px; font-weight: 800;">동아리 검색</h1>
+                <button id="search-view-add-club-btn" class="admin-only-btn" style="display: none; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;"><i class="fa-solid fa-plus"></i> 동아리 추가</button>
+            </div>
+            <p id="search-result-count" style="color: var(--gray); margin-bottom: 30px; font-size: 15px;">동아리를 검색해보세요</p>
+            <div class="search-bar-modern" style="max-width: 100%; margin-bottom: 25px; width: 100%;">
+                <i class="fa-solid fa-magnifying-glass" style="color: var(--gray);"></i>
+                <input type="text" id="main-search-input" placeholder="동아리 이름, 학과, 진로 등을 검색해보세요">
+            </div>
+            <div id="search-filter-group" style="margin-bottom: 30px;"></div>
+            <div id="club-results" class="club-grid"></div>
+            <div id="search-empty-state" class="empty-state" style="display: none;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 50px; color: var(--border); margin-bottom: 20px;"></i>
+                <h2 style="font-size: 24px; font-weight: 800; color: var(--gray);">검색 결과가 없어요</h2>
+            </div>
+        </div>
+
+        <div id="notice-view" class="content-view" style="display: none; padding: 40px 60px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h1 style="font-size: 32px; font-weight: 800;">모집 공고</h1>
+                <button id="notice-view-add-btn" class="admin-only-btn" style="display: none; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;"><i class="fa-solid fa-plus"></i> 공고 추가</button>
+            </div>
+            
+            <div class="search-bar-modern" style="max-width: 100%; margin-bottom: 40px; width: 100%;">
+                <i class="fa-solid fa-magnifying-glass" style="color: var(--gray);"></i>
+                <input type="text" id="notice-search-input" placeholder="원하는 동아리의 공고를 검색해보세요">
+            </div>
+
+            <div id="notice-list" class="notice-grid"></div>
+            <div id="notice-empty-state" class="empty-state" style="display: none;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 50px; color: var(--border); margin-bottom: 20px;"></i>
+                <h2 style="font-size: 24px; font-weight: 800; color: var(--gray);">진행 중인 모집 공고가 없어요 T.T</h2>
+            </div>
+        </div>
+
+        <div id="admin-view" class="content-view" style="display: none; padding: 50px 80px;">
+            <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 40px;">관리자 대시보드</h1>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 50px;">
+                <div style="background: var(--bg); padding: 30px; border-radius: 16px; border-left: 5px solid #2563eb; border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <div style="color: var(--gray); font-size: 14px; margin-bottom: 10px; font-weight: 600;">총 동아리</div>
+                    <div id="total-clubs" style="font-size: 36px; font-weight: 900; color: #2563eb;">0</div>
+                </div>
+                <div style="background: var(--bg); padding: 30px; border-radius: 16px; border-left: 5px solid #ef4444; border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <div style="color: var(--gray); font-size: 14px; margin-bottom: 10px; font-weight: 600;">모집 공고</div>
+                    <div id="total-notices" style="font-size: 36px; font-weight: 900; color: #ef4444;">0</div>
+                </div>
+                <div style="background: var(--bg); padding: 30px; border-radius: 16px; border-left: 5px solid #10b981; border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <div style="color: var(--gray); font-size: 14px; margin-bottom: 10px; font-weight: 600;">로그인 사용자</div>
+                    <div id="logged-in-user" style="font-size: 30px; font-weight: 900; color: #10b981; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">-</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; margin-bottom: 50px;">
+                <button id="quick-add-club" style="flex: 1; padding: 16px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">동아리 추가</button>
+                <button id="quick-add-notice" style="flex: 1; padding: 16px; background: #ef4444; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">공고 추가</button>
+            </div>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 50px 0;">
+            
+            <div style="background: var(--bg); padding: 30px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 40px;">
+                <h3 style="font-weight: 800; margin-bottom: 24px;"><i class="fa-solid fa-list" style="color: var(--primary);"></i> 카테고리(분야) 분리 관리</h3>
+                
+                <div style="display: flex; gap: 40px;">
+                    <div style="flex: 1;">
+                        <h4 style="margin-bottom: 15px; color: var(--primary); font-weight: 800;">🎓 진로 분야</h4>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" id="new-cat-career" placeholder="새 진로 분야 이름" class="input-theme" style="padding: 10px;">
+                            <button id="add-cat-career-btn" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: 700; cursor:pointer;">추가</button>
+                        </div>
+                        <div id="admin-cat-career-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h4 style="margin-bottom: 15px; color: #22c23a; font-weight: 800;">🌱 자율 분야</h4>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" id="new-cat-auto" placeholder="새 자율 분야 이름" class="input-theme" style="padding: 10px;">
+                            <button id="add-cat-auto-btn" style="padding: 10px 20px; background: #22c23a; color: white; border: none; border-radius: 10px; font-weight: 700; cursor:pointer;">추가</button>
+                        </div>
+                        <div id="admin-cat-auto-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="aiAdmin-view" class="content-view" style="display: none; padding: 50px 80px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+                <h1 style="font-size: 32px; font-weight: 800;">AI 맞춤 질문 관리</h1>
+                <button id="open-question-modal-btn" class="admin-only-btn" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;"><i class="fa-solid fa-plus"></i> 새 질문 추가</button>
+            </div>
+            
+            <div style="background: var(--bg); padding: 30px; border-radius: 16px; border: 1px solid var(--border);">
+                <p style="color: var(--gray); font-size: 14px; margin-bottom: 25px; line-height: 1.5;">사용자의 성향을 파악할 15개의 무작위 질문 풀을 관리합니다.<br>질문에 '매우 그렇다(5점)'를 선택했을 때 어떤 카테고리의 점수를 높일지 다중 선택해 주세요.</p>
+                <div id="admin-question-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module" src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.home-cat-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    const target = this.getAttribute('data-target');
+                    if (target === 'notice') {
+                        document.getElementById('menu-notice').click();
+                    } else {
+                        const cat = this.getAttribute('data-cat');
+                        document.getElementById('menu-search').click();
+                        setTimeout(function() {
+                            const mainInput = document.getElementById('main-search-input');
+                            if (mainInput) mainInput.value = cat;
+                            const tags = document.querySelectorAll('#search-filter-group .filter-tag');
+                            let matched = false;
+                            tags.forEach(function(tag) {
+                                if (tag.getAttribute('data-val') === cat) {
+                                    tag.click();
+                                    matched = true;
+                                }
+                            });
+                            if (!matched) {
+                                if (mainInput) mainInput.dispatchEvent(new Event('input'));
+                            }
+                        }, 100);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
