@@ -127,7 +127,7 @@ async function fetchInitialData() {
                 clubsData = JSON.parse(localStorage.getItem('clubsData')) || [...defaultClubs];
             }
 
-            // 2. 공지사항 데이터 로드 (배열/객체 안전 변환)
+            // 2. 공지사항 데이터 로드
             const noticesSnap = await get(ref(db, 'notices'));
             if (noticesSnap.exists()) {
                 const rawData = noticesSnap.val();
@@ -136,7 +136,7 @@ async function fetchInitialData() {
                 noticesData = JSON.parse(localStorage.getItem('noticesData')) || [];
             }
 
-            // 3. 카테고리 데이터 로드 (객체 내부의 하위 배열들 각각 안전 변환)
+            // 3. 카테고리 데이터 로드 (categories_v2)
             const catSnap = await get(ref(db, 'categories_v2'));
             if (catSnap.exists()) {
                 const rawCat = catSnap.val();
@@ -148,7 +148,7 @@ async function fetchInitialData() {
                 categoriesData = JSON.parse(localStorage.getItem('catDataObj')) || JSON.parse(JSON.stringify(defaultCategories));
             }
 
-            // 4. 질문 데이터 로드 (배열/객체 안전 변환)
+            // 4. 질문 데이터 로드 (questions)
             const qSnap = await get(ref(db, 'questions'));
             if (qSnap.exists()) {
                 const rawData = qSnap.val();
@@ -173,7 +173,6 @@ async function fetchInitialData() {
         renderNotices();
         updateAdminDashboard();
     }
-
     function renderDynamicUI() {
         const searchFilterGroup = document.getElementById('search-filter-group');
         if (searchFilterGroup) {
