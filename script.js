@@ -928,7 +928,8 @@ signInWithCredential(auth, credential)
         if (window.google) {
             google.accounts.id.initialize({
                 client_id: "378418673299-o1fdouo0re0unt3vm71tjrljdsaq4ori.apps.googleusercontent.com",
-                callback: window.handleGoogleLogin
+                callback: window.handleGoogleLogin,
+                ux_mode: "redirect"
             });
             if(document.getElementById("google-login-btn-container")) {
                 google.accounts.id.renderButton(
