@@ -1,21 +1,24 @@
 // ==================== Firebase 라이브러리 불러오기 ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-database.js";
+// ★ 추가된 부분: 파이어베이스 인증(Auth) 기능 불러오기
+import { getAuth, signInWithCredential, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
 
 // ==================== Firebase 설정 ====================
 const firebaseConfig = {
-    apiKey: "AIzaSyBWVBByE6xtdM5WWl3EjZfzG_s92cG3wFQ",
-    authDomain: "clink-aee48.firebaseapp.com",
-    databaseURL: "https://clink-aee48-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "clink-aee48",
-    storageBucket: "clink-aee48.firebasestorage.app",
-    messagingSenderId: "6494204529",
-    appId: "1:6494204529:web:cd17c4d86c800afef0e1d0",
-    measurementId: "G-KKVCXTK1LS"
+    apiKey: "AIzaSyA-yu5wsMADDuyO_EMCDP6MiO6n7RtOdKg",
+    authDomain: "webtest-d4e68.firebaseapp.com",
+    databaseURL: "https://webtest-d4e68-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "webtest-d4e68",
+    storageBucket: "webtest-d4e68.firebasestorage.app",
+    messagingSenderId: "430889156958",
+    appId: "1:430889156958:web:41214004b9cfa1edee0fcf",
+    measurementId: "G-FNM644Y3X0"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app); // ★ 추가된 부분: 파이어베이스에도 인증 객체 활성화
 
 function escapeHTML(str) {
     if (typeof str !== 'string') return str;
@@ -113,23 +116,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         set(ref(db, 'questions'), questionsData).catch(e => console.error(e));
     }
 
-    async function fetchInitialData() {
+async function fetchInitialData() {
         try {
+            // 1. 동아리 데이터 로드 (배열/객체 안전 변환)
             const clubsSnap = await get(ref(db, 'clubs'));
-            clubsData = clubsSnap.exists() ? clubsSnap.val().filter(c => c !== null) : (JSON.parse(localStorage.getItem('clubsData')) || [...defaultClubs]);
+            if (clubsSnap.exists()) {
+                const rawData = clubsSnap.val();
+                clubsData = Array.isArray(rawData) ? rawData.filter(c => c !== null) : Object.values(rawData).filter(c => c !== null);
+            } else {
+                clubsData = JSON.parse(localStorage.getItem('clubsData')) || [...defaultClubs];
+            }
 
+            // 2. 공지사항 데이터 로드 (배열/객체 안전 변환)
             const noticesSnap = await get(ref(db, 'notices'));
-            noticesData = noticesSnap.exists() ? noticesSnap.val().filter(n => n !== null) : (JSON.parse(localStorage.getItem('noticesData')) || []);
+            if (noticesSnap.exists()) {
+                const rawData = noticesSnap.val();
+                noticesData = Array.isArray(rawData) ? rawData.filter(n => n !== null) : Object.values(rawData).filter(n => n !== null);
+            } else {
+                noticesData = JSON.parse(localStorage.getItem('noticesData')) || [];
+            }
 
+            // 3. 카테고리 데이터 로드 (객체 내부의 하위 배열들 각각 안전 변환)
             const catSnap = await get(ref(db, 'categories_v2'));
             if (catSnap.exists()) {
-                categoriesData = catSnap.val();
+                const rawCat = catSnap.val();
+                categoriesData = {
+                    career: Array.isArray(rawCat.career) ? (rawCat.career || []).filter(c => c !== null) : Object.values(rawCat.career || {}).filter(c => c !== null),
+                    auto: Array.isArray(rawCat.auto) ? (rawCat.auto || []).filter(c => c !== null) : Object.values(rawCat.auto || {}).filter(c => c !== null)
+                };
             } else {
                 categoriesData = JSON.parse(localStorage.getItem('catDataObj')) || JSON.parse(JSON.stringify(defaultCategories));
             }
 
+            // 4. 질문 데이터 로드 (배열/객체 안전 변환)
             const qSnap = await get(ref(db, 'questions'));
-            questionsData = qSnap.exists() ? qSnap.val().filter(q => q !== null) : (JSON.parse(localStorage.getItem('questionsData')) || [...defaultQuestions]);
+            if (qSnap.exists()) {
+                const rawData = qSnap.val();
+                questionsData = Array.isArray(rawData) ? rawData.filter(q => q !== null) : Object.values(rawData).filter(q => q !== null);
+            } else {
+                questionsData = JSON.parse(localStorage.getItem('questionsData')) || [...defaultQuestions];
+            }
         } catch (error) {
             console.error("데이터 로드 에러:", error);
             clubsData = JSON.parse(localStorage.getItem('clubsData')) || [...defaultClubs];
@@ -138,6 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             questionsData = JSON.parse(localStorage.getItem('questionsData')) || [...defaultQuestions];
         }
 
+        // 카테고리가 문자열로 들어온 경우 배열로 정규화
         clubsData.forEach(c => { if(typeof c.category === 'string') c.category = [c.category]; });
         questionsData.forEach(q => { if(typeof q.category === 'string') q.category = [q.category]; });
 
@@ -843,6 +870,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             isLoggedIn = false;
             alert("학교 공식 이메일 계정(@pess.cnehs.kr)으로만 로그인할 수 있습니다.\n(지원하기 및 AI 추천 기능이 제한됩니다.)");
         }
+        // 기존 구글 로그인 처리 함수(예: handleCredentialResponse) 내부의 맨 위에 아래 코드를 추가합니다.
+
+// ----- 여기서부터 복사해서 추가하세요 -----
+const credential = GoogleAuthProvider.credential(response.credential);
+signInWithCredential(auth, credential)
+    .then((result) => {
+        console.log("파이어베이스 데이터베이스 접근 권한 획득 성공!");
+    })
+    .catch((error) => {
+        console.error("파이어베이스 권한 획득 실패:", error);
+    });
+// ----- 여기까지 -----
+
+// (이 아래로는 회원님이 기존에 작성하신 currentUser 설정 및 화면 UI 변경 코드가 그대로 유지되어야 합니다.)
     };
 
     if(document.getElementById('logout-btn')) {
