@@ -125,3 +125,25 @@ button:active { transform: scale(0.97) !important; }
     .modal-window { width: 90%; max-width: 420px; padding: 25px; }
     .content-view { padding: 30px 20px !important; }
 }
+/* 진로/자율 동아리 구분 태그 디자인 */
+.club-type-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    margin-right: 5px;
+}
+
+/* 진로 동아리: 파란색 테마 */
+.type-career {
+    background-color: #e0f2fe;
+    color: #0284c7;
+}
+
+/* 자율 동아리: 초록색 테마 */
+.type-auto {
+    background-color: #dcfce7;
+    color: #16a34a;
+}

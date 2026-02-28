@@ -1,10 +1,10 @@
 // ==================== Firebase 라이브러리 불러오기 ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-database.js";
-// ★ 추가된 부분: 파이어베이스 인증(Auth) 기능 불러오기
 import { getAuth, signInWithCredential, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
 
 // ==================== Firebase 설정 ====================
+// 프로젝트 이전 시 이 객체 내부의 값들을 새로운 Firebase 프로젝트 설정으로 교체하세요. // goat
 const firebaseConfig = {
     apiKey: "AIzaSyA-yu5wsMADDuyO_EMCDP6MiO6n7RtOdKg",
     authDomain: "webtest-d4e68.firebaseapp.com",
@@ -18,8 +18,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const auth = getAuth(app); // ★ 추가된 부분: 파이어베이스에도 인증 객체 활성화
+const auth = getAuth(app); 
 
+// HTML 태그 방지(XSS 공격 방어) 함수
 function escapeHTML(str) {
     if (typeof str !== 'string') return str;
     return str.replace(/[&<>'"]/g, 
@@ -27,14 +28,16 @@ function escapeHTML(str) {
     );
 }
 
+// 고유 ID 생성 함수
 function generateUUID() {
     return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // [관리자 권한 설정] 이 리스트에 포함된 이메일 계정으로 로그인 시 관리자 메뉴가 활성화됩니다. // goat
     const ADMIN_EMAILS = ["geonho0827@pess.cnehs.kr"]; 
     
-    // 기본 데이터 세팅
+    // [초기 데이터 세팅] 데이터베이스가 완전히 비어있을 때 사용되는 샘플 데이터입니다. // goat
     const defaultClubs = [
         { id: "c1", name: "픽셀 마스터", intro: "게임 개발부터 그래픽 디자인까지 디지털 아트를 창조합니다.", clubType: "진로 동아리", category: ["프로그래밍"], department: "소프트웨어학과", career: "게임 개발자" },
         { id: "c2", name: "앙상블", intro: "다양한 악기로 아름다운 하모니를 만드는 기악 합주 동아리입니다.", clubType: "자율 동아리", category: ["문화"], activity: "정기 연주회 및 버스킹" },
@@ -42,12 +45,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: "c4", name: "아르키메데스", intro: "수학적 원리를 탐구하고 실생활의 문제를 논리적으로 해결합니다.", clubType: "진로 동아리", category: ["학술"], department: "수학과", career: "데이터 분석가" }
     ];
     
-    // ★ [기능 7] 카테고리 완전 분리 구조 적용
+    // [기본 카테고리 목록] 사이트 리셋 시 생성될 기본 분류들입니다. // goat
     const defaultCategories = {
-        career: ["프로그래밍", "학술", "미디어", "어학", "발명", "창업"],
-        auto: ["문화", "사회봉사", "체육", "환경"]
+        career: ["공학", "로봇", "경제", "역사", "환경", "프로그래밍"],
+        auto: ["공학", "로봇", "경제", "역사", "환경", "프로그래밍"]
     };
 
+    // [성향 분석 기본 질문] 테스트 질문이 없을 때 사용되는 샘플 질문입니다. // goat
     const defaultQuestions = [
         { id: "q1", text: "복잡한 문제를 논리적으로 해결하는 과정을 즐긴다.", category: ["프로그래밍"] },
         { id: "q2", text: "사람들을 돕고 지역사회에 기여하는 것에 보람을 느낀다.", category: ["사회봉사"] },
@@ -56,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: "q11", text: "자연 환경 보호와 생태계 보전에 관심이 많다.", category: ["환경"] }
     ];
 
+    // 데이터 저장용 변수들
     let clubsData = [];
     let noticesData = [];
     let categoriesData = { career: [], auto: [] };
@@ -71,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let selectedCategoriesForClub = []; 
     let selectedCategoriesForQuestion = []; 
 
+    // DOM 요소 참조 (화면 및 메뉴)
     const views = {
         home: document.getElementById('home-view'),
         search: document.getElementById('search-view'),
@@ -99,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clubResults = document.getElementById('club-results');
     const noticeList = document.getElementById('notice-list');
 
+    // [데이터 저장 함수들] Firebase 실시간 데이터베이스와 로컬스토리지에 동시 저장
     function saveClubs() {
         localStorage.setItem('clubsData', JSON.stringify(clubsData));
         set(ref(db, 'clubs'), clubsData).catch(e => console.error(e));
@@ -116,9 +123,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         set(ref(db, 'questions'), questionsData).catch(e => console.error(e));
     }
 
-async function fetchInitialData() {
+    // [데이터 불러오기] 페이지 로드 시 실행됨
+    async function fetchInitialData() {
         try {
-            // 1. 동아리 데이터 로드 (배열/객체 안전 변환)
+            // 1. 동아리 데이터 로드
             const clubsSnap = await get(ref(db, 'clubs'));
             if (clubsSnap.exists()) {
                 const rawData = clubsSnap.val();
@@ -136,7 +144,7 @@ async function fetchInitialData() {
                 noticesData = JSON.parse(localStorage.getItem('noticesData')) || [];
             }
 
-            // 3. 카테고리 데이터 로드 (categories_v2)
+            // 3. 카테고리 데이터 로드
             const catSnap = await get(ref(db, 'categories_v2'));
             if (catSnap.exists()) {
                 const rawCat = catSnap.val();
@@ -148,7 +156,7 @@ async function fetchInitialData() {
                 categoriesData = JSON.parse(localStorage.getItem('catDataObj')) || JSON.parse(JSON.stringify(defaultCategories));
             }
 
-            // 4. 질문 데이터 로드 (questions)
+            // 4. 질문 데이터 로드
             const qSnap = await get(ref(db, 'questions'));
             if (qSnap.exists()) {
                 const rawData = qSnap.val();
@@ -164,7 +172,7 @@ async function fetchInitialData() {
             questionsData = JSON.parse(localStorage.getItem('questionsData')) || [...defaultQuestions];
         }
 
-        // 카테고리가 문자열로 들어온 경우 배열로 정규화
+        // 구 버전 데이터 호환용 변환
         clubsData.forEach(c => { if(typeof c.category === 'string') c.category = [c.category]; });
         questionsData.forEach(q => { if(typeof q.category === 'string') q.category = [q.category]; });
 
@@ -173,29 +181,31 @@ async function fetchInitialData() {
         renderNotices();
         updateAdminDashboard();
     }
+
+    // [필터 UI 렌더링] 검색 화면 상단의 동적 카테고리 버튼 생성
     function renderDynamicUI() {
         const searchFilterGroup = document.getElementById('search-filter-group');
         if (searchFilterGroup) {
-            // 카테고리 분리 적용 랜더링
             let html = `
                 <div style="margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 15px;">
                     <span class="filter-tag type-btn" data-val="" style="cursor:pointer; background: var(--border); color: var(--text);">전체보기</span>
-                    <span class="filter-tag type-btn" data-val="진로 동아리" style="cursor:pointer; background: var(--primary); color: white;">진로 동아리</span>
-                    <span class="filter-tag type-btn" data-val="자율 동아리" style="cursor:pointer; background: #22c23a; color: white;">자율 동아리</span>
+                    <span class="filter-tag type-btn" data-val="진로 동아리" style="cursor:pointer; background: #2563eb; color: white;">진로 동아리</span>
+                    <span class="filter-tag type-btn" data-val="자율 동아리" style="cursor:pointer; background: #16a34a; color: white;">자율 동아리</span>
                 </div>
                 
-                <div style="margin-bottom: 8px; font-size: 13px; font-weight: 800; color: var(--primary);">🎓 진로 분야</div>
+                <div style="margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #2563eb;">🎓 진로 분야</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
                     ${(categoriesData.career || []).map(cat => `<span class="filter-tag cat-btn" data-val="${escapeHTML(cat)}">${escapeHTML(cat)}</span>`).join('')}
                 </div>
 
-                <div style="margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #22c23a;">🌱 자율 분야</div>
+                <div style="margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #16a34a;">🌱 자율 분야</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                     ${(categoriesData.auto || []).map(cat => `<span class="filter-tag cat-btn" data-val="${escapeHTML(cat)}">${escapeHTML(cat)}</span>`).join('')}
                 </div>
             `;
             searchFilterGroup.innerHTML = html;
             
+            // 필터 태그 클릭 이벤트 연결
             document.querySelectorAll('#search-filter-group .filter-tag').forEach(tag => {
                 tag.onclick = () => {
                     const val = tag.getAttribute('data-val');
@@ -207,8 +217,8 @@ async function fetchInitialData() {
         renderAdminLists();
     }
 
+    // [관리자 전용 UI] 질문 리스트 및 카테고리 삭제 관리
     function renderAdminLists() {
-        // 진로 분야 어드민 리스트
         const careerList = document.getElementById('admin-cat-career-list');
         if (careerList) {
             careerList.innerHTML = (categoriesData.career || []).map((cat, idx) => `
@@ -225,7 +235,6 @@ async function fetchInitialData() {
             });
         }
 
-        // 자율 분야 어드민 리스트
         const autoList = document.getElementById('admin-cat-auto-list');
         if (autoList) {
             autoList.innerHTML = (categoriesData.auto || []).map((cat, idx) => `
@@ -242,7 +251,6 @@ async function fetchInitialData() {
             });
         }
 
-        // 질문 관리 리스트
         const adminQList = document.getElementById('admin-question-list');
         if (adminQList) {
             adminQList.innerHTML = questionsData.map((q, idx) => {
@@ -273,7 +281,7 @@ async function fetchInitialData() {
         }
     }
 
-    // 어드민 카테고리 추가 버튼 로직
+    // 카테고리 추가 이벤트
     if (document.getElementById('add-cat-career-btn')) {
         document.getElementById('add-cat-career-btn').onclick = () => {
             const val = document.getElementById('new-cat-career').value.trim();
@@ -287,6 +295,7 @@ async function fetchInitialData() {
         };
     }
 
+    // [페이지 전환 함수]
     function showPage(pageId) {
         Object.values(views).forEach(v => { if (v) v.style.display = 'none'; });
         Object.values(menus).forEach(m => { if (m) m.classList.remove('active'); });
@@ -303,7 +312,7 @@ async function fetchInitialData() {
         else if (pageId === 'aiAdmin') renderAdminLists();
     }
 
-    // ★ [기능 5] 진로/자율 선택에 따른 모달 폼 동적 변화 적용
+    // [모달 제어 함수들]
     function renderClubTypeButtons(selected = "진로 동아리") {
         selectedClubType = selected || "진로 동아리";
         const container = document.getElementById('club-type-buttons');
@@ -320,7 +329,6 @@ async function fetchInitialData() {
             });
         }
 
-        // 입력 폼 표시 토글
         if (selectedClubType === "진로 동아리") {
             document.getElementById('career-fields').style.display = 'flex';
             document.getElementById('autonomous-fields').style.display = 'none';
@@ -328,7 +336,6 @@ async function fetchInitialData() {
             document.getElementById('career-fields').style.display = 'none';
             document.getElementById('autonomous-fields').style.display = 'flex';
         }
-        // 카테고리도 그에 맞게 렌더링
         renderClubCategoryButtons(selectedCategoriesForClub);
     }
 
@@ -337,7 +344,6 @@ async function fetchInitialData() {
         const container = document.getElementById('club-category-buttons');
         if (!container) return;
         
-        // 현재 선택된 타입에 맞는 카테고리 배열 불러오기
         const targetCats = selectedClubType === "진로 동아리" ? categoriesData.career : categoriesData.auto;
         
         container.innerHTML = (targetCats || []).map(cat => {
@@ -367,7 +373,6 @@ async function fetchInitialData() {
         const container = document.getElementById('question-category-buttons');
         if (!container) return;
         
-        // 성향 질문에는 모든 카테고리를 제공
         const allCats = [...(categoriesData.career || []), ...(categoriesData.auto || [])];
         
         container.innerHTML = allCats.map(cat => {
@@ -392,6 +397,7 @@ async function fetchInitialData() {
         });
     }
 
+    // 전역으로 상세 모달 함수 노출 (AI 추천 리스트에서 호출용)
     window.openClubDetailModal = (id) => openClubDetail(id);
 
     function openClubDetail(id) {
@@ -482,11 +488,13 @@ async function fetchInitialData() {
         };
     }
 
+    // [동아리 리스트 렌더링] 검색 및 동아리 카드 생성 // goat
     function renderClubs(filter = '') {
         if (!clubResults) return;
         clubResults.innerHTML = '';
         const term = filter.toLowerCase().trim();
         
+        // 검색 로직: 이름, 소개, 카테고리, 구분, 학과 등 모든 필드 검색 가능
         const filteredClubs = clubsData.filter(club => {
             const catArrStr = Array.isArray(club.category) ? club.category.join(" ") : club.category;
             const searchText = `${club.name} ${club.intro} ${catArrStr} ${club.clubType || ''} ${club.department || ''} ${club.career || ''} ${club.activity || ''}`.toLowerCase();
@@ -498,6 +506,7 @@ async function fetchInitialData() {
             return matchesCat;
         });
 
+        // 결과 없음 표시 제어
         if (filteredClubs.length === 0 && term) {
             document.getElementById('search-empty-state').style.display = 'block';
             if (document.getElementById('search-result-count')) document.getElementById('search-result-count').textContent = '검색 결과 없음';
@@ -508,7 +517,7 @@ async function fetchInitialData() {
             }
         }
 
-        // ★ [기능 6] 카드 정보 요약 랜더링
+        // 각 동아리 카드 HTML 생성
         filteredClubs.forEach((club, index) => {
             const card = document.createElement('div');
             card.className = 'club-card';
@@ -522,6 +531,9 @@ async function fetchInitialData() {
             const isFav = favoriteClubs.includes(String(club.id));
             const heartClass = isFav ? 'fa-solid active' : 'fa-regular';
             
+            // 타입 구분에 따른 CSS 클래스 적용 (배너 색상 다르게 표시)
+            const typeClass = (club.clubType === "진로 동아리") ? "type-career" : "type-auto";
+
             let briefHtml = "";
             if (club.clubType === "진로 동아리") {
                 const deptText = club.department ? escapeHTML(club.department) : "미기재";
@@ -547,7 +559,7 @@ async function fetchInitialData() {
                         <i class="fa-solid fa-ellipsis-v delete-btn admin-only" style="cursor: pointer; color: #cbd5e1; padding: 5px; display: none;"></i>
                     </div>
                 </div>
-                <div style="color: var(--primary); font-size: 12px; font-weight: 800; margin-bottom: 8px;">${escapeHTML(typeStr)}</div>
+                <div class="club-type-tag ${typeClass}" style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; margin-bottom:8px;">${escapeHTML(typeStr)}</div>
                 
                 ${briefHtml}
 
@@ -561,12 +573,14 @@ async function fetchInitialData() {
             `;
             clubResults.appendChild(card);
 
+            // 관리자 버튼 노출 제어
             if (document.body.classList.contains('admin-active')) {
                 card.querySelectorAll('.delete-btn').forEach(btn => btn.style.display = 'block');
             }
 
             card.onclick = () => openClubDetail(club.id);
 
+            // 하트 버튼(찜) 클릭 시
             card.querySelector('.fav-btn').onclick = (e) => {
                 e.stopPropagation();
                 if (!isLoggedIn) {
@@ -584,6 +598,7 @@ async function fetchInitialData() {
                 renderClubs(document.getElementById('main-search-input') ? document.getElementById('main-search-input').value : ''); 
             };
 
+            // 관리 메뉴 열기
             card.querySelector('.delete-btn').onclick = (e) => {
                 e.stopPropagation();
                 if (!document.body.classList.contains('admin-active')) return;
@@ -604,6 +619,7 @@ async function fetchInitialData() {
         });
     }
 
+    // [공지사항 렌더링] 모집 공고 리스트 생성
     function renderNotices(filter = '') {
         if (!noticeList) return;
         noticeList.innerHTML = '';
@@ -675,6 +691,7 @@ async function fetchInitialData() {
         });
     }
 
+    // [데이터 편집 폼 제어] 등록 및 수정 모달 열기
     function openClubModal() {
         editingClubId = null;
         document.getElementById('club-modal-title').textContent = '새 동아리 등록';
@@ -722,6 +739,7 @@ async function fetchInitialData() {
         if(modals.question) modals.question.style.display = 'flex';
     }
 
+    // [데이터 저장 실행 버튼들]
     if(document.getElementById('save-club-btn')) {
         document.getElementById('save-club-btn').onclick = () => {
             const name = document.getElementById('club-name').value.trim();
@@ -787,7 +805,6 @@ async function fetchInitialData() {
         };
     }
 
-    // ★ [기능 6] 공고 저장 및 날짜 변환 (월, 일만 표시)
     if(document.getElementById('save-notice-btn')) {
         document.getElementById('save-notice-btn').onclick = () => {
             const clubName = document.getElementById('notice-club-name').value.trim();
@@ -824,6 +841,7 @@ async function fetchInitialData() {
         };
     }
 
+    // [구글 로그인 처리]
     function decodeJwtResponse(token) {
         try {
             let base64Url = token.split('.')[1];
@@ -843,6 +861,7 @@ async function fetchInitialData() {
         const email = payload.email;
         const userName = payload.name;
         
+        // 학교 도메인 체크
         if (email.toLowerCase().endsWith("@pess.cnehs.kr")) {
             isLoggedIn = true;
             if(modals.login) modals.login.style.display = 'none';
@@ -855,6 +874,7 @@ async function fetchInitialData() {
             localStorage.setItem('userEmail', email);
             localStorage.setItem('userName', userName);
 
+            // 관리자 여부 확인 후 메뉴 표시
             if (ADMIN_EMAILS.includes(email.toLowerCase())) {
                 document.body.classList.add('admin-active');
                 if(menus.admin) menus.admin.style.display = 'flex';
@@ -869,22 +889,19 @@ async function fetchInitialData() {
             isLoggedIn = false;
             alert("학교 공식 이메일 계정(@pess.cnehs.kr)으로만 로그인할 수 있습니다.\n(지원하기 및 AI 추천 기능이 제한됩니다.)");
         }
-        // 기존 구글 로그인 처리 함수(예: handleCredentialResponse) 내부의 맨 위에 아래 코드를 추가합니다.
-
-// ----- 여기서부터 복사해서 추가하세요 -----
-const credential = GoogleAuthProvider.credential(response.credential);
-signInWithCredential(auth, credential)
-    .then((result) => {
-        console.log("파이어베이스 데이터베이스 접근 권한 획득 성공!");
-    })
-    .catch((error) => {
-        console.error("파이어베이스 권한 획득 실패:", error);
-    });
-// ----- 여기까지 -----
-
-// (이 아래로는 회원님이 기존에 작성하신 currentUser 설정 및 화면 UI 변경 코드가 그대로 유지되어야 합니다.)
+        
+        // Firebase Auth 연동
+        const credential = GoogleAuthProvider.credential(response.credential);
+        signInWithCredential(auth, credential)
+            .then((result) => {
+                console.log("파이어베이스 데이터베이스 접근 권한 획득 성공!");
+            })
+            .catch((error) => {
+                console.error("파이어베이스 권한 획득 실패:", error);
+            });
     };
 
+    // 로그아웃 처리
     if(document.getElementById('logout-btn')) {
         document.getElementById('logout-btn').onclick = () => {
             if (confirm('로그아웃하시겠습니까?')) {
@@ -904,6 +921,7 @@ signInWithCredential(auth, credential)
         };
     }
 
+    // 페이지 로드 시 자동 로그인 확인
     const savedEmail = localStorage.getItem('userEmail');
     const savedName = localStorage.getItem('userName');
     if (savedEmail && savedName && savedEmail.toLowerCase().endsWith("@pess.cnehs.kr")) {
@@ -924,6 +942,7 @@ signInWithCredential(auth, credential)
         }
     }
 
+    // Google Identity Services 초기화
     setTimeout(() => {
         if (window.google) {
             google.accounts.id.initialize({
@@ -940,6 +959,7 @@ signInWithCredential(auth, credential)
         }
     }, 500);
 
+    // [이벤트 바인딩 모음]
     const bindEvent = (id, action) => {
         const el = document.getElementById(id);
         if(el) el.onclick = action;
@@ -965,6 +985,7 @@ signInWithCredential(auth, credential)
     if(menus.admin) menus.admin.onclick = () => showPage('admin');
     if(menus.aiAdmin) menus.aiAdmin.onclick = () => showPage('aiAdmin');
     
+    // [AI 추천 기능 로직] // goat
     bindEvent('view-recommend-banner', () => {
         if (!isLoggedIn) {
             alert("나의 성향을 정확히 분석하기 위해 먼저 학교 공식 계정으로 로그인해주세요!");
@@ -972,6 +993,7 @@ signInWithCredential(auth, credential)
             return;
         }
 
+        // 전체 질문 중 무작위 15개 선정
         const shuffled = [...questionsData].sort(() => 0.5 - Math.random());
         currentQuizQuestions = shuffled.slice(0, 15);
         
@@ -1003,6 +1025,7 @@ signInWithCredential(auth, credential)
         if(modals.recommend) modals.recommend.style.display = 'flex';
     });
 
+    // 추천 분석 알고리즘
     bindEvent('get-recommend-btn', () => {
         const scores = {}; 
         const counts = {}; 
@@ -1027,6 +1050,7 @@ signInWithCredential(auth, credential)
             return;
         }
 
+        // 평균 점수가 가장 높은 카테고리 선정
         let topCategory = "";
         let maxAvg = -1;
         
@@ -1038,6 +1062,7 @@ signInWithCredential(auth, credential)
             }
         }
 
+        // 기본값 처리
         if (maxAvg <= 3) {
             topCategory = "환경";
         }
@@ -1055,6 +1080,7 @@ signInWithCredential(auth, credential)
             });
         }
 
+        // 결과 화면 구성
         const resultDiv = document.getElementById('recommend-result');
         if(resultDiv) {
             resultDiv.innerHTML = `
@@ -1084,12 +1110,14 @@ signInWithCredential(auth, credential)
     bindEvent('close-recommend-modal', closeRecommendAction);
     bindEvent('close-recommend-modal-x', closeRecommendAction);
 
+    // [테마 토글]
     bindEvent('theme-toggle', () => {
         document.body.classList.toggle('dark-mode');
         localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
     });
     if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
 
+    // [검색창 통합 핸들러]
     const handleSearch = (inputEl) => {
         if(!inputEl) return;
         const val = inputEl.value;
@@ -1111,6 +1139,7 @@ signInWithCredential(auth, credential)
         noticeSearchInput.oninput = (e) => renderNotices(e.target.value);
     }
 
+    // [관리자 통계 업데이트]
     function updateAdminDashboard() {
         if(document.getElementById('total-clubs')) document.getElementById('total-clubs').textContent = clubsData.length;
         if(document.getElementById('total-notices')) document.getElementById('total-notices').textContent = noticesData.length;
@@ -1118,6 +1147,7 @@ signInWithCredential(auth, credential)
         if(document.getElementById('logged-in-user')) document.getElementById('logged-in-user').textContent = savedName || '-';
     }
 
+    // [데이터 관리 도구]
     bindEvent('reset-data-btn', () => {
         if (confirm('모든 데이터를 초기화하시겠습니까? (Firebase 데이터도 덮어씁니다)')) {
             clubsData = [...defaultClubs]; noticesData = [];
@@ -1164,6 +1194,7 @@ signInWithCredential(auth, credential)
         };
     }
 
+    // 초기 화면 실행
     showPage('home');
     await fetchInitialData();
 });
