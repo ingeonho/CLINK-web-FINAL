@@ -946,9 +946,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
         if (window.google) {
             google.accounts.id.initialize({
-                client_id: "378418673299-o1fdouo0re0unt3vm71tjrljdsaq4ori.apps.googleusercontent.com",
-                callback: window.handleGoogleLogin,
-                ux_mode: "redirect"
+                client_id: "430889156958-9r75u9g9r5ihi9jo6f0265djvb8kf84m.apps.googleusercontent.com",
+                callback: window.handleGoogleLogin
             });
             if(document.getElementById("google-login-btn-container")) {
                 google.accounts.id.renderButton(
