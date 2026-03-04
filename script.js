@@ -20,17 +20,26 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app); 
 
-// HTML 태그 방지(XSS 공격 방어) 함수
+// [보안 수정완료] 완벽한 HTML 이스케이프 함수
 function escapeHTML(str) {
-    if (typeof str !== 'string') return str;
-    return str.replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-    );
+    if (typeof str !== 'string' || !str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML; 
 }
 
-// 고유 ID 생성 함수
-function generateUUID() {
-    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+// [추가된 코드] 안전한 D-Day 계산 함수 (타임존 오류 방지)
+function calculateDDay(deadlineStr) {
+    if (!deadlineStr) return null;
+    const parts = deadlineStr.split('-');
+    if (parts.length !== 3) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    const deadlineDate = new Date(parts[0], parts[1] - 1, parts[2]); 
+    
+    const diff = deadlineDate.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -306,8 +315,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         window.scrollTo(0, 0);
 
-        if (pageId === 'search') renderClubs(document.getElementById('main-search-input') ? document.getElementById('main-search-input').value : '');
-        else if (pageId === 'notice') renderNotices(document.getElementById('notice-search-input') ? document.getElementById('notice-search-input').value : '');
+        // [수정완료] Optional Chaining으로 안전한 DOM 접근
+        if (pageId === 'search') {
+            renderClubs(document.getElementById('main-search-input')?.value || '');
+        } else if (pageId === 'notice') {
+            renderNotices(document.getElementById('notice-search-input')?.value || '');
+        }
         else if (pageId === 'admin') updateAdminDashboard();
         else if (pageId === 'aiAdmin') renderAdminLists();
     }
@@ -443,11 +456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let dDayText = "";
         let isExpired = false;
         if (notice.deadline) {
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const targetDate = new Date(notice.deadline);
-            targetDate.setHours(0,0,0,0);
-            const diffDays = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
+            const diffDays = calculateDDay(notice.deadline);
             
             if (diffDays > 0) dDayText = `D-${diffDays}`;
             else if (diffDays === 0) dDayText = `D-Day`;
